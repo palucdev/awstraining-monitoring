@@ -10,7 +10,6 @@ import com.awstraining.backend.api.rest.v1.model.Measurements;
 import com.awstraining.backend.business.measurements.MeasurementDO;
 import com.awstraining.backend.business.measurements.MeasurementService;
 
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 
 import org.apache.logging.log4j.LogManager;
@@ -40,7 +39,7 @@ class DeviceController implements DeviceIdApi {
         LOGGER.info("Publishing measurement for device '{}'", deviceId);
         final MeasurementDO measurementDO = fromMeasurement(deviceId, measurement);
         service.saveMeasurement(measurementDO);
-        methodCounter("retrieveMeasurements.counter");
+        this.meterRegistry.counter("publishMeasurements.counter", "method", "invocation").increment();
         return ResponseEntity.ok(measurement);
     }
 
@@ -54,7 +53,7 @@ class DeviceController implements DeviceIdApi {
         final Measurements measurementsResult = new Measurements();
         measurementsResult.measurements(measurements);
         LOGGER.info("Measurements size: '{}'", measurements.size());
-        methodCounter("retrieveMeasurements.counter");
+        this.meterRegistry.counter("retrieveMeasurements.counter", "method", "invocation").increment();
         return ResponseEntity.ok(measurementsResult);
     }
 
@@ -74,17 +73,5 @@ class DeviceController implements DeviceIdApi {
         final Long creationTime = measurement.getTimestamp();
         measurementDO.setCreationTime(creationTime == null ? currentTimeMillis() : creationTime);
         return measurementDO;
-    }
-
-    private void methodCounter(String counterName) {
-        String methodName = new Object() {
-        }.getClass().getEnclosingMethod().getName();
-
-        Counter counter = Counter
-                .builder(counterName)
-                .tag("method", methodName)
-                .register(meterRegistry);
-
-        counter.increment();
     }
 }
